@@ -460,17 +460,28 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
             {n: 'firefox', g: 1, r: /Firefox\/(\d+)/}
         ];
         var env = {
+            touch : (('ontouchstart') in window || !!WIN.navigator.userAgent),
+            gesture : (('ongesturestart') in window || !!WIN.navigator.userAgent),
+            online : WIN.navigator.onLine,
             userAgent : WIN.navigator.userAgent,
             msPointEnabled : !!WIN.navigator.userAgent,
-            browser : platforms.map(function(item){
-                var matche = item.r.exec(WIN.navigator.userAgent);
-                if(matche)return matche;
-            }),
-            screen : {
-                width : window.innerWidth,
-                height : window.innerHeight
-            }
+            screenWidth : window.innerWidth,
+            screenHeight : window.innerHeight
         };
+        var status = [0,0];
+        var matches,browser = {};
+        platforms.each(function(item){
+            if(!status[item.g]&&(matches=item.r.exec(WIN.navigator.userAgent))){
+                status[item.g] = browser['version'] = item.v || +matches[1];
+                browser['name'] = item.n;
+                if(item.x){
+                    small.extend(env,item.x);
+                }
+            }
+        });
+        env.mobile = !!(status[0]);
+        env.browser = browser.name;
+        env.version = browser.version;
         small.extend({
             env:env
         });
