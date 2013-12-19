@@ -463,8 +463,6 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
             touch : (('ontouchstart') in window || !!WIN.navigator.userAgent),
             gesture : (('ongesturestart') in window || !!WIN.navigator.userAgent),
             online : WIN.navigator.onLine,
-            userAgent : WIN.navigator.userAgent,
-            msPointEnabled : !!WIN.navigator.userAgent,
             screenWidth : window.innerWidth,
             screenHeight : window.innerHeight
         };
@@ -482,17 +480,109 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
         env.mobile = !!(status[0]);
         env.browser = browser.name;
         env.version = browser.version;
-        small.extend({
-            env:env
-        });
+        small.env = env;
+
 		DEBUG && console.timeEnd('env');
 		DEBUG && console.time('event');
+        var HANDLERS = {};
+        var EVENTS_DESKTOP = {
+            touchstart: 'mousedown',
+            touchmove: 'mousemove',
+            touchend: 'mouseup',
+            touch : 'click',
+            dbtouch : 'dblclick',
+            dbclick : 'dblclick'
+        };
+        var ELEMENT_ID = 1;
         small.extend(small.fn,{
-            listen : function(){},
-            removeListen : function(){},
-            trigger : function(){}
+            trigger : function(eventType,args,oldTarget){
+                if(small.isString(eventType)){
+                    var event = document.createEvent('Events');
+                    event.initEvent(_getEventName(eventType), true, true, null, null, null,null, null, null, null, null, null, null, null, null);
+                    if(args)small.extend(event,args);
+                }
+                if(oldTarget != null)event.srcEvent = oldTarget;
+                this.each(function(item){
+                    item.dispatchEvent(event);
+                });
+                return this;
+            },
+            listen : function(event,callback){
+                event = _getEventName(event);
+                this.each(function(element) {
+                    var id = _getElementId(element);
+                    var elementHandlers = HANDLERS[id] || (HANDLERS[id] = []);
+                    var handler = {
+                      event: event,
+                      callback: callback,
+                      proxy: _createProxyCallback(callback, element),
+                      index: elementHandlers.length
+                    };
+                    elementHandlers.push(handler);
+                    _addEventListener(element, handler.event, handler.proxy);
+                });
+                return this;
+            },
+            removeListen : function(event,callback){
+                event = _getEventName(event);
+                this.each(function(element) {
+                    var id = _getElementId(element);
+                    (HANDLERS[id] || []).filter(function(handler) {
+                      return handler && (!event || handler.event === event) &&
+                             (!callback || handler.callback === callback);
+                    }).each(function(handler) {
+                      delete HANDLERS[id][handler.index];
+                      _removeEventListener(element, handler.event, handler.proxy);
+                    });
+                });
+                return this;
+            },
         });
+          function _getEventName(eventName) {
+            eventName = eventName.toLowerCase();
+            return ($.env.mobile ? eventName : EVENTS_DESKTOP[eventName]) || eventName;
+          }
+          function _getElementId(element) {
+            return element.id || (element.id = '__$_' + ELEMENT_ID++);
+          }
+          function _addEventListener(element, eventName, callback) {
+            if (element.addEventListener) {
+              element.addEventListener(eventName, callback, false);
+            } else if (element.attachEvent) {
+              element.attachEvent('on' + eventName, callback);
+            } else {
+              element['on' + eventName] = callback;
+            }
+          };
+          function _removeEventListener(element, eventName, callback) {
+            if (element.removeEventListener) {
+              element.removeEventListener(eventName, callback, false);
+            } else if (element.detachEvent) {
+              element.detachEvent('on' + eventName, callback);
+            } else {
+              element['on' + eventName] = null;
+            }
+          };
+        function _createProxyCallback(callback, element) {
+            return function(event) {
+              event = event || window.event;
+              if (event && !event.target) {
+                event.target = event.srcElement;
+              }
+              if (callback.apply(element, [event].concat(event.data)) === false) {
+                event.preventDefault();
+              }
+            }
+        }
 		DEBUG && console.timeEnd('event');
+        DEBUG && console.time('gesture');
+        var GESTURES = ['click','dbclick','touch','longtouch','dbtouch','drag','drop','pinch','pinching'];
+        GESTURES.each(function(gesture){
+            small.fn[gesture] = function(callback){
+                this.listen(gesture,callback);
+            };
+        });
+        DEBUG && console.timeEnd('gesture');
 		return small;
 	})();
 	WIN.small = WIN.$ = small;
