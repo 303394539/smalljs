@@ -1,4 +1,4 @@
-typeof DEBUG === 'undefined' && (DEBUG = 1);
+typeof DEBUG === 'undefined' && (DEBUG = true);
 'use strict';
 (function(WIN,DOM,OBJ,ARRAY){
 	DEBUG && console.time('core');
@@ -79,8 +79,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 						fn.call(scope, this[key], key, this);
 					}
 				}
-			}
-			,
+			},
 			map: function(fn, scope) {
 				if (small.isArray(this)) {
 					return ARRAY.prototype.map.apply(this, arguments);
@@ -92,8 +91,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 					return result;
 				}
-			}
-			,
+			},
 			toArray: function(object, begin, end) {
 				return ARRAY.prototype.slice.call(this, begin, end);
 			}
@@ -104,8 +102,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 			getDOM : function(selector){
 				selector = selector.trim();
 				return small.query(DOM,selector);
-			}
-			,
+			},
 			query : function(doms,selector){
 				var _HTML = /^\s*<(\w+|!)[^>]*>/;
 				var _CLASS = /^\.([\w-]+)$/;
@@ -133,8 +130,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 		small.extend({
 			hasOwnProperty : function(object,property){
 				return OBJ.prototype.hasOwnProperty.call(object, property);
-			}
-			,
+			},
 			time : function(format){
 				var time = new Date();
 				var o = {
@@ -159,49 +155,38 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					}
 				}
 				return format;
-			}
-			,
+			},
 			type : function(obj){
 				return OBJ.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
-			}
-			,
+			},
 			isArray : ARRAY.isArray,
 			isObject : function(obj){
 				return small.type(obj) === 'object';
-			}
-			,
+			},
 			isNumber : function(obj){
 				return small.type(obj) === 'number';
-			}
-			,
+			},
 			isString : function(obj){
 				return small.type(obj) === 'string';
-			}
-			,
+			},
 			isDefined : function(obj){
 				return obj === undefined;
-			}
-			,
+			},
 			isNull : function(obj){
 				return obj === null;
-			}
-			,
+			},
 			isBoolean : function(obj){
 				return small.type(obj) === 'boolean';
-			}
-			,
+			},
 			isTrue : function(obj){
 				return obj === true;
-			}
-			,
+			},
 			isFalse : function(obj){
 				return obj === false;
-			}
-			,
+			},
 			isElement : function(obj){
 				return small.type(obj).indexOf('html')>=0&&small.type(obj).indexOf('element')>0;
-			}
-			,
+			},
 			string : function(obj){
 				return small.isString(obj)?obj:
 				small.isObject(obj)?JSON.stringify(obj):
@@ -245,9 +230,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 						}
 					});
 				}
-			}
-			,
-		
+			},
 		});
 		small.extend(small.fn,{
 			isSmall : true,
@@ -263,16 +246,14 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 				return $(!selector ? parents : parents.filter(function(item){
 					return item.parentNode && item.parentNode!==document && small.query(item.parentNode,selector).indexOf(item)>=0;
 				}));
-			}
-			,
+			},
 			children : function(selector){
 				return $(_concat(this.map(function(item){
 					return !selector?item.children.toArray():item.children.toArray().filter(function(item){
 						return item.parentNode && small.query(item.parentNode,selector).indexOf(item)>=0;
 					});
 				})));
-			}
-			,
+			},
 			brother : function(selector){
 				return $(_concat(this.map(function(item){
 					var list = item.parentNode.children.toArray();
@@ -280,8 +261,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 						return item.parentNode && small.query(item.parentNode,selector).indexOf(item)>=0;
 					});
 				})));
-			}
-			,
+			},
 			val : function(obj){
 				if(!obj&&!small.isString(obj)){
 					var result = [];
@@ -296,8 +276,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 					return this;
 				}
-			}
-			,
+			},
 			text : function(obj){
 				if(!obj&&!small.isString(obj)){
 					var result = [];
@@ -312,8 +291,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 					return this;
 				}
-			}
-			,
+			},
 			html : function(obj){
 				if(!obj&&!small.isString(obj)){
 					var result = [];
@@ -344,8 +322,12 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					}
 					return this;
 				}
-			}
-			,
+			},
+            empty : function(){
+                this.each(function(item){
+                    item.innerHTML = null;
+                });
+            },
 			css : function(property,value){
 				var VENDORS = ['-webkit-', '-moz-', '-ms-', '-o-', ''];
 				if(small.isString(property)){
@@ -371,8 +353,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 				}
 				return this;
-			}
-			,
+			},
 			attr : function(property,value){
 				if(small.isString(property)){
 					if(!value){
@@ -395,8 +376,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 				}
 				return this;
-			}
-			,
+			},
 			removeAttr : function(property){
 				if(small.isString(property)){
 					this.each(function(item){
@@ -404,13 +384,11 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 					});
 				}
 				return this;
-			}
-			,
+			},
 			hide : function(){
 				this.css('display','none');
 				return this;
-			}
-			,
+			},
 			show : function(){
 				this.css('display','block');
 				return this;
@@ -481,7 +459,6 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
         env.browser = browser.name;
         env.version = browser.version;
         small.env = env;
-
 		DEBUG && console.timeEnd('env');
 		DEBUG && console.time('event');
         var HANDLERS = {};
