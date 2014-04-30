@@ -102,6 +102,9 @@
 		return target;
 	};
 
+	/*
+		small框架基础方法
+	*/
 	small.extend(object.prototype, {
 		forEach: function(fn, scope) {
 			if (small.isArray(this)) {
@@ -252,7 +255,7 @@
 	};
 
 	/*
-		为对象装备方法
+		small给document方法
 	 */
 	small.fn.extend({
 
@@ -293,6 +296,12 @@
 					dom.textContent = obj;
 				});
 			}
+		},
+
+		empty: function(){
+			this.forEach(function(dom){
+				item.innerHTML = null;
+			});
 		}
 	});
 
