@@ -239,6 +239,8 @@
 					doms = dom.getElementsByTagName(selector);
 
 				}
+			}else{
+				doms = [];
 			}
 
 			return doms;
@@ -299,6 +301,12 @@
 					return context;
 
 				}else if(small.isDocument(selector) || small.isDocument(context)){
+
+					context = small.isEmptyString(selector) ? context : selector;
+
+					return S(context);
+
+				}else if(small.isArray(selector) || small.isArray(context)){
 
 					context = small.isEmptyString(selector) ? context : selector;
 
@@ -372,6 +380,30 @@
 		find: function(selector) {
 			return small.fn.init(selector, this);
 		},
+
+		data: function(name,value){
+			var datas = [];
+			if(small.isUndefind(name)){
+				var data = {};
+				this.forEach(function(dom){
+					dom.dataset.forEach(function(value,key){
+						data[key] = value;
+					});
+					datas.push(data);
+				});
+			}else if(small.isUndefind(value)){
+				this.forEach(function(dom){
+					datas.push(dom.dataset[name]);
+				});
+			}else{
+				this.forEach(function(dom){
+					dom.dataset[name] = value;
+				});
+				return this;
+			}
+
+			return datas.length == 1 ? datas[0] : datas;
+		}
 	});
 
 	/*
