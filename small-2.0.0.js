@@ -30,11 +30,11 @@
 
 		strundefined = typeof undefined,
 
+		SMALLOBJECT = 'SMALLOBJECT',
+
 		small = function(selector, context) {
 
-			var Q = new small.fn.init(selector, context);
-			Q.__proto__ = small.fn;
-			return Q;
+			return small.fn.init(selector, context);
 
 		};
 
@@ -133,6 +133,14 @@
 	});
 
 	small.extend({
+		isSmall: function(obj) {
+			return small.isUndefind(obj) ? false : (obj.isSmall ? obj.isSmall === SMALLOBJECT : false);
+		},
+
+		isDocument: function(obj) {
+			return !small.isSmall(obj) && obj.nodeType ? true : false;
+		},
+
 		//获取对象类型
 		type: function(obj) {
 			return object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
@@ -154,11 +162,15 @@
 			return small.type(obj) === 'string';
 		},
 
-		isNumber: function(obj){
+		isEmptyString: function(obj) {
+			return obj === '';
+		},
+
+		isNumber: function(obj) {
 			return small.type(obj) === 'number' && !isNaN(obj);
 		},
 
-		isObject: function(obj){
+		isObject: function(obj) {
 			return small.type(obj) === 'obj';
 		},
 
@@ -198,89 +210,134 @@
 		//判断是否是数组对象
 		isArray: array.isArray,
 
-		isUndefind: function(obj){
+		isUndefind: function(obj) {
 			return typeof obj === 'undefined';
 		},
-		toString: function(obj){
-	    return obj === true 
-        ? 'yes' : obj === false 
-                  ? 'no' : small.isObject(obj) 
-                           ? JSON.stringify(obj) : obj;
+		toString: function(obj) {
+			return obj === true ? 'yes' : obj === false ? 'no' : small.isObject(obj) ? JSON.stringify(obj) : obj;
+		},
+		query: function(selector, context) {
+
+			var doms;
+
+			var dom = context || document;
+
+			if (small.isString(selector) && !small.isEmptyString(selector)) {
+
+				if (small.isHTML(selector)) {
+
+				} else if (small.isClass(selector)) {
+
+					doms = dom.getElementsByClassName(selector.substring(1));
+
+				} else if (small.isID(selector)) {
+
+					doms = dom.getElementById(selector.substring(1));
+
+				} else if (small.isTag(selector)) {
+
+					doms = dom.getElementsByTagName(selector);
+
+				}
+			}
+
+			return doms;
 		}
 	});
 
 	/*
 		选择器
 	*/
+
+	var S = function(dom, selector, context) {
+
+		dom = dom.nodeType ? [dom] : dom.toArray() || [];
+
+		dom.selector = selector || '';
+
+		dom.context = context || [];
+
+		dom.__proto__ = small.fn;
+
+		small.extend(dom.__proto__, {
+			isSmall: SMALLOBJECT
+		});
+
+		return dom;
+
+	};
+
 	small.fn.init = function(selector, context) {
 
-		var doms;
+		if (small.isUndefind(selector) || (small.isEmptyString(selector) && small.isUndefind(context))) {
 
-		if (!selector) {
-			return this;
-		}
+			return S();
 
-		if (small.isString(selector)) {
-			if (small.isHTML(selector)) {
+		}else{
+			if(small.isString(selector) && !small.isEmptyString(selector)){
 
-			} else if (small.isClass(selector)) {
+				if (small.isUndefind(context)) {
 
-				doms = document.getElementsByClassName(selector.substring(1));
+					return S(small.query(selector, document), selector, document);
 
-			} else if (small.isID(selector)) {
+				} else if (small.isDocument(context)) {
 
-				doms = document.getElementById(selector.substring(1));
+					return S(small.query(selector, context), selector, context);
 
-			} else if (small.isTag(selector)) {
+				} else if (small.isSmall(context)) {
 
-				doms = document.getElementsByTagName(selector);
+					return S(small.query(selector, context[0]), selector, context[0]);
 
-			} else {
+				}
 
-				doms = document.querySelectorAll(selector);
+			}else if(!small.isString(selector) || small.isEmptyString(selector)){
+
+				if(small.isSmall(selector) || small.isSmall(context)){
+
+					context = small.isEmptyString(selector) ? context : selector;
+
+					return context;
+
+				}else if(small.isDocument(selector) || small.isDocument(context)){
+
+					context = small.isEmptyString(selector) ? context : selector;
+
+					return S(context);
+
+				}
 
 			}
 		}
 
-		doms = doms.nodeType ? [doms] : doms.toArray();
-
-		if (doms) {
-			doms.context = document;
-			doms.selector = selector || '';
-		}else{
-			doms = [];
-		}
-
-		return doms;
 	};
 
 	/*
-		small给document方法
+		small给document装备方法
 	 */
 	small.fn.extend({
 
 		indexOf: array.prototype.indexOf,
 
-    forEach: array.prototype.forEach,
+		forEach: array.prototype.forEach,
 
-    map: array.prototype.map,
+		map: array.prototype.map,
 
-    filter: array.prototype.filter,
+		filter: array.prototype.filter,
 
 		html: function(obj) {
-			if(small.isUndefind(obj)){
+			if (small.isUndefind(obj)) {
 				return this[0].innerHTML;
-			}else{
-				this.forEach(function(dom){
-					if(small.isString(obj) || small.isNumber(obj)){
+			} else {
+				this.forEach(function(dom) {
+					if (small.isString(obj) || small.isNumber(obj)) {
 						dom.innerHTML = obj;
-					}else{
+					} else {
 						dom.innerHTML = null;
-						if(small.isArray(obj)){
-							obj.forEach(function(item){
+						if (small.isArray(obj)) {
+							obj.forEach(function(item) {
 								dom.appendChild(item);
 							});
-						}else{
+						} else {
 							dom.appendChild(obj);
 						}
 					}
@@ -288,21 +345,33 @@
 			}
 		},
 
-		text: function(obj){
-			if(small.isUndefind(obj)){
+		text: function(obj) {
+			if (small.isUndefind(obj)) {
 				return this[0].textContent;
-			}else{
-				this.forEach(function(dom){
+			} else {
+				this.forEach(function(dom) {
 					dom.textContent = obj;
 				});
 			}
 		},
 
-		empty: function(){
-			this.forEach(function(dom){
-				item.innerHTML = null;
+		empty: function() {
+			this.forEach(function(dom) {
+				dom.innerHTML = null;
 			});
-		}
+		},
+
+		remove: function() {
+			this.forEach(function(dom) {
+				if (dom.parentNode) {
+					dom.parentNode.removeChild(dom);
+				}
+			});
+		},
+
+		find: function(selector) {
+			return small.fn.init(selector, this);
+		},
 	});
 
 	/*
