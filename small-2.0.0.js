@@ -129,10 +129,19 @@
 		},
 		toArray: function(object, begin, end) {
 			return array.prototype.slice.call(this, begin, end);
+		},
+		bind: function(scope) {
+			var method = this;
+			var args = arguments.toArray(1);
+			return function() {
+				return method.apply(scope, args.concat(arguments));
+			};
 		}
 	});
 
 	small.extend({
+		nop: function() {},
+
 		isSmall: function(obj) {
 			return small.isUndefind(obj) ? false : (obj.isSmall ? obj.isSmall === SMALLOBJECT : false);
 		},
@@ -171,7 +180,7 @@
 		},
 
 		isObject: function(obj) {
-			return small.type(obj) === 'obj';
+			return small.type(obj) === 'object';
 		},
 
 		isHTML: function(obj) {
@@ -190,10 +199,21 @@
 			return /^[\w-]+$/.test(obj);
 		},
 
-		//是否是
+		isNull: function(obj) {
+			return obj === null;
+		},
+
+		isTrue: function(obj) {
+			return obj === true;
+		},
+
+		isFalse: function(obj) {
+			return obj === false;
+		},
+
 		isPlainObject: function(obj) {
 
-			if (small.type(obj) !== "object" || obj.nodeType || small.isWindow(obj)) {
+			if (!small.isObject(obj) || obj.nodeType || small.isWindow(obj)) {
 				return false;
 			}
 
@@ -214,7 +234,7 @@
 			return typeof obj === 'undefined';
 		},
 		toString: function(obj) {
-			return obj === true ? 'yes' : obj === false ? 'no' : small.isObject(obj) ? JSON.stringify(obj) : obj;
+			return small.isTrue(obj) ? 'yes' : small.isFalse(obj) ? 'no' : small.isObject(obj) ? JSON.stringify(obj) : obj;
 		},
 		query: function(selector, context) {
 
@@ -239,7 +259,7 @@
 					doms = dom.getElementsByTagName(selector);
 
 				}
-			}else{
+			} else {
 				doms = [];
 			}
 
@@ -275,8 +295,8 @@
 
 			return S();
 
-		}else{
-			if(small.isString(selector) && !small.isEmptyString(selector)){
+		} else {
+			if (small.isString(selector) && !small.isEmptyString(selector)) {
 
 				if (small.isUndefind(context)) {
 
@@ -292,21 +312,21 @@
 
 				}
 
-			}else if(!small.isString(selector) || small.isEmptyString(selector)){
+			} else if (!small.isString(selector) || small.isEmptyString(selector)) {
 
-				if(small.isSmall(selector) || small.isSmall(context)){
+				if (small.isSmall(selector) || small.isSmall(context)) {
 
 					context = small.isEmptyString(selector) ? context : selector;
 
 					return context;
 
-				}else if(small.isDocument(selector) || small.isDocument(context)){
+				} else if (small.isDocument(selector) || small.isDocument(context)) {
 
 					context = small.isEmptyString(selector) ? context : selector;
 
 					return S(context);
 
-				}else if(small.isArray(selector) || small.isArray(context)){
+				} else if (small.isArray(selector) || small.isArray(context)) {
 
 					context = small.isEmptyString(selector) ? context : selector;
 
@@ -381,30 +401,141 @@
 			return small.fn.init(selector, this);
 		},
 
-		data: function(name,value){
+		attr: function(name, value) {
+			if (small.isUndefind(value)) {
+				return this[0].getAttribute(name);
+			} else {
+				this.forEach(function(dom) {
+					dom.setAttribute(name, small.toString(value));
+				});
+				return this;
+			}
+		},
+
+		removeAttr: function(name) {
+			this.forEach(function(dom) {
+				dom.removeAttribute(name);
+			});
+			return this;
+		},
+
+		data: function(name, value) {
 			var datas = [];
-			if(small.isUndefind(name)){
+			if (small.isUndefind(name)) {
 				var data = {};
-				this.forEach(function(dom){
-					dom.dataset.forEach(function(value,key){
+				this.forEach(function(dom) {
+					dom.dataset.forEach(function(value, key) {
 						data[key] = value;
 					});
 					datas.push(data);
 				});
-			}else if(small.isUndefind(value)){
-				this.forEach(function(dom){
+			} else if (small.isUndefind(value)) {
+				this.forEach(function(dom) {
 					datas.push(dom.dataset[name]);
 				});
-			}else{
-				this.forEach(function(dom){
+			} else {
+				this.forEach(function(dom) {
 					dom.dataset[name] = value;
 				});
 				return this;
 			}
 
 			return datas.length == 1 ? datas[0] : datas;
-		}
+		},
+
+		removeData: function(name) {
+			if (!small.isUndefind(name)) {
+				this.removeAttr('data-' + name);
+			}
+			return this;
+		},
+
+		val: function(value) {
+			if (small.isUndefind(value)) {
+				return this.length ? this[0].value : null;
+			} else {
+				this.forEach(function(dom) {
+					dom.value = small.toString(value);
+				});
+				return this;
+			}
+		},
+
+		css: function(property, value) {
+			if (small.isUndefind(value)) {
+				if (small.isObject(property)) {
+					property.forEach(function(value, key) {
+						this.css(key, value);
+					}.bind(this));
+					return this;
+				} else {
+					return this[0].style[property] || document.defaultView.getComputedStyle(this[0], '')[property];
+				}
+			} else {
+				this.forEach(function(dom) {
+					dom.style[property] = value;
+				});
+				return this;
+			}
+		},
+
+		addClass: function(name) {
+			this.forEach(_addClass(name));
+			return this;
+		},
+
+		removeClass: function(name) {
+			this.forEach(_removeClass(name));
+			return this;
+		},
+
+		show: function() {
+			this.style('display', 'block');
+			return this;
+		},
+
+		hide: function() {
+			this.style('display', 'none');
+			return this;
+		},
 	});
+
+	function _existsClass(el, name) {
+		return el.classList ? el.classList.contains(name) : (el.className.split(/\s+/g).indexOf(name) >= 0);
+	};
+
+	function _addClass(name) {
+		return function(dom) {
+			if (!_existsClass(dom, name)) {
+				if (dom.classList) {
+					dom.classList.add(name);
+				} else {
+					dom.className = (dom.className + ' ' + name).trim();
+				}
+			}
+		};
+	};
+
+	function _removeClass(name) {
+		return function(dom) {
+			var className = dom.className;
+			if (name && name != className) {
+				if (_existsClass(dom, name)) {
+					if (dom.classList) {
+						dom.classList.remove(name);
+					} else {
+						var exp = new RegExp('^' + [name, name, name].join(' | ') + '$',
+							'g');
+						dom.className = className.replace(exp, ' ')
+							.replace(/\s+/g, ' ')
+							.trim();
+					}
+				}
+			} else {
+				dom.className = '';
+			}
+		};
+	}
 
 	/*
 		在环境中装配small对象
