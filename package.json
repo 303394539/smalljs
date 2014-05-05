@@ -1,0 +1,30 @@
+{
+  "name": "smalljs",
+  "version": "2.0.0",
+  "description": "smalljs Project",
+  "homepage": "",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": {
+    "name": "baic <303394539@qq.com>"
+  },
+  "dependencies": {
+    "uglify-js": "~2",
+    "grunt": "*",
+    "grunt-contrib-clean": "*",
+    "grunt-contrib-compress": "*",
+    "grunt-contrib-cssmin": "*",
+    "grunt-contrib-htmlmin": "*",
+    "grunt-contrib-imagemin": "~0.4.1",
+    "grunt-contrib-uglify": "*",
+    "grunt-contrib-stylus": "*",
+    "grunt-contrib-copy": "*",
+    "grunt-rsync": "*"
+  }
+}
