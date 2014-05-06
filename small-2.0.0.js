@@ -136,7 +136,10 @@
 			return function() {
 				return method.apply(scope, args.concat(arguments));
 			};
-		}
+		},
+		defer: function(millis) {
+			return this._job = setTimeout.apply(null, [this].concat(arguments.toArray()));
+		},
 	});
 
 	small.extend({
@@ -250,7 +253,7 @@
 
 					doms = dom.getElementsByClassName(selector.substring(1));
 
-				} else if (small.isID(selector)) {
+				} else if (small.isID(selector) && dom === document) {
 
 					doms = dom.getElementById(selector.substring(1));
 
@@ -264,6 +267,35 @@
 			}
 
 			return doms;
+		},
+		uniqueSort: function(obj) {
+			var hasDuplicate = false,
+				duplicates = [],
+				elem,
+				j = 0,
+				i = 0;
+			if (!small.isArray(obj)) {
+				return [];
+			} else {
+				obj.sort(function(a, b) {
+					if (a === b) {
+						hasDuplicate = true;
+					}
+					return 0;
+				});
+
+				if (hasDuplicate) {
+					while ((elem = obj[i++])) {
+						if (elem === obj[i]) {
+							j = duplicates.push(i);
+						}
+					}
+					while (j--) {
+						obj.splice(duplicates[j], 1);
+					}
+				}
+				return obj;
+			}
 		}
 	});
 
@@ -273,7 +305,7 @@
 
 	var S = function(dom, selector, context) {
 
-		dom = dom.nodeType ? [dom] : dom.toArray() || [];
+		dom = dom ? (dom.nodeType ? [dom] : dom.toArray() || []) : [];
 
 		dom.selector = selector || '';
 
@@ -498,6 +530,50 @@
 			this.style('display', 'none');
 			return this;
 		},
+
+		first: function() {
+			return S(this[0]);
+		},
+
+		last: function() {
+			return S(this[this.length - 1])
+		},
+
+		parents: function(obj) {
+			if (small.isUndefind(obj)) {
+				return S(small.uniqueSort(this.map(function(dom) {
+					return dom.parentNode;
+				})));
+			} else {
+				var ancestors = [];
+				var nodes = this;
+
+				while (nodes.length) {
+					nodes = nodes.filter(function(node) {
+						if (node && (node = node.parentNode) &&
+							node !== document && ancestors.indexOf(node) < 0) {
+							return ancestors.push(node);
+						}
+					});
+				}
+
+				return _filtered(ancestors, obj);
+			}
+		},
+
+		siblings: function(obj) {
+			return _filtered(_flatten(this.map(function(dom) {
+				return dom.parentNode.children.toArray().filter(function(child) {
+					return child !== dom;
+				});
+			})), obj);
+		},
+
+		children: function(obj) {
+      return _filtered(_flatten(this.map(function(dom) {
+        return dom.children.toArray();
+      })), obj);
+		}
 	});
 
 	function _existsClass(el, name) {
@@ -535,7 +611,18 @@
 				dom.className = '';
 			}
 		};
+	};
+
+	function _flatten(array) {
+		return S(array.length ? [].concat.apply([], array) : array);
 	}
+
+	function _filtered(nodes, selector) {
+		return S(small.isUndefind(selector) ? nodes : nodes.filter(function(dom) {
+			return dom.parentNode &&
+				S(small.query(selector, dom.parentNode)).indexOf(dom) >= 0;
+		}));
+	};
 
 	/*
 		在环境中装配small对象

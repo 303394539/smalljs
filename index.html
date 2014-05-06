@@ -17,8 +17,14 @@
   <input value="123" type="text"/>
   <input value="123" type="button"/>
 </div>
+<div id='asd' class="dsa" data-id="123" data-img="321" style="width:100px">
+  <div id="a"></div>
+  <input value='321' type="text"/>
+  <input value="123" type="text"/>
+  <input value="123" type="button" class='asd' id='id'/>
+</div>
 <script src="small-2.0.0.js"></script>
 <script> 
-  console.log($('.asd').data('img','54').css({width:'20px'}));
+  console.log($('.dsa').children('.asd'));
 </script>
   <!-- html -->
