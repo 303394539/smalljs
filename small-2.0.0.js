@@ -1,24 +1,8 @@
+typeof DEBUG === 'undefined' && (DEBUG = 1);
 'use strict';
-(function(global, factory) {
 
-	if (typeof module === "object" && typeof module.exports === "object") {
-		module.exports = global.document ?
-			factory(global, true) :
-			function(w) {
-				if (!w.document) {
-					throw new Error("small框架需要window对象和document对象");
-				}
-				return factory(w);
-		};
-	} else {
-		factory(global);
-	}
-
-}(typeof window !== "undefined" ? window : this, function(window, noGlobal) {
-
-	/*
-		core,small框架核心
-	*/
+DEBUG && console.time('core');
+(function(global) {
 	var
 	document = window.document,
 
@@ -28,41 +12,64 @@
 
 		array = Array,
 
-		strundefined = typeof undefined,
+		EMPTY_ARRAY = [],
 
-		SMALLOBJECT = 'SMALLOBJECT',
+		SMALLOBJECT = 'SMALLOBJECT';
 
-		small = function(selector, context) {
 
-			return small.fn.init(selector, context);
+	var $ = function(selector, children) {
 
-		};
-
-	small.fn = small.prototype = {
-
-		version: version,
-
-		constructor: small,
-
-		selector: '',
+		if ($.isUndefind(selector)) {
+			return S();
+		} else if ($.isSmall(selector) && $.isUndefind(children)) {
+			return selector;
+		} else {
+			return S($.getDOMObject(selector, children), selector);
+		}
 
 	};
 
-	small.extend = small.fn.extend = function() {
+	var S = function(dom, selector) {
+
+		dom = dom || EMPTY_ARRAY;
+
+		dom.__proto__ = S.prototype;
+
+		dom.selector = selector || '';
+
+		return dom;
+	};
+
+	S.prototype = $.fn = {
+
+		isS: SMALLOBJECT,
+
+		indexOf: array.prototype.indexOf,
+
+		forEach: array.prototype.forEach,
+
+		map: array.prototype.map,
+
+		filter: array.prototype.filter
+
+	};
+
+
+	$.extend = $.fn.extend = function() {
 		var options, name, src, copy, copyIsArray, clone,
 			target = arguments[0] || {},
 			i = 1,
 			length = arguments.length,
 			deep = false;
 
-		if (typeof target === "boolean") {
+		if (_type(target) === "boolean") {
 			deep = target;
 
 			target = arguments[i] || {};
 			i++;
 		}
 
-		if (typeof target !== "object" && !small.isFunction(target)) {
+		if (_type(target) !== "object" && _type(target) !== 'function') {
 			target = {};
 		}
 
@@ -81,16 +88,16 @@
 						continue;
 					}
 
-					if (deep && copy && (small.isPlainObject(copy) || (copyIsArray = small.isArray(copy)))) {
+					if (deep && copy && (_isPlainObject(copy) || (copyIsArray = array.isArray(copy)))) {
 						if (copyIsArray) {
 							copyIsArray = false;
-							clone = src && small.isArray(src) ? src : [];
+							clone = src && array.isArray(src) ? src : [];
 
 						} else {
-							clone = src && small.isPlainObject(src) ? src : {};
+							clone = src && _isPlainObject(src) ? src : {};
 						}
 
-						target[name] = small.extend(deep, clone, copy);
+						target[name] = $.extend(deep, clone, copy);
 
 					} else if (copy !== undefined) {
 						target[name] = copy;
@@ -102,22 +109,43 @@
 		return target;
 	};
 
-	/*
-		small框架基础方法
-	*/
-	small.extend(object.prototype, {
+	function _type(obj) {
+		return object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
+	};
+
+	function _isWindow(obj) {
+		return obj != null && obj === obj.window;
+	};
+
+	function _isPlainObject(obj) {
+		if (_type(obj) !== "object" || obj.nodeType || _isWindow(obj)) {
+			return false;
+		}
+
+		try {
+			if (obj.constructor && !hasOwn.call(obj.constructor.prototype, "isPrototypeOf")) {
+				return false;
+			}
+		} catch (e) {
+			return false;
+		}
+
+		return true;
+	};
+
+	$.extend(object.prototype, {
 		forEach: function(fn, scope) {
-			if (small.isArray(this)) {
+			if (array.isArray(this)) {
 				array.prototype.forEach.apply(this, arguments);
 			} else {
 				for (var key in this)
-					if (small.hasOwn(this, key)) {
+					if (object.prototype.hasOwnProperty.call(this, key)) {
 						fn.call(scope, this[key], key, this);
 					}
 			}
 		},
 		map: function(fn, scope) {
-			if (small.isArray(this)) {
+			if (array.isArray(this)) {
 				return array.prototype.map.apply(this, arguments);
 			} else {
 				var result = {};
@@ -129,7 +157,10 @@
 		},
 		toArray: function(object, begin, end) {
 			return array.prototype.slice.call(this, begin, end);
-		},
+		}
+	});
+
+	$.extend(Function.prototype, {
 		bind: function(scope) {
 			var method = this;
 			var args = arguments.toArray(1);
@@ -137,41 +168,37 @@
 				return method.apply(scope, args.concat(arguments));
 			};
 		},
+
 		defer: function(millis) {
 			return this._job = setTimeout.apply(null, [this].concat(arguments.toArray()));
-		},
+		}
 	});
 
-	small.extend({
+	$.extend($, {
 		nop: function() {},
 
 		isSmall: function(obj) {
-			return small.isUndefind(obj) ? false : (obj.isSmall ? obj.isSmall === SMALLOBJECT : false);
+			return $.isUndefind(obj) ? false : (obj.isS ? obj.isS === SMALLOBJECT : false);
 		},
 
 		isDocument: function(obj) {
-			return !small.isSmall(obj) && obj.nodeType ? true : false;
+			return !$.isSmall(obj) && obj.nodeType ? true : false;
 		},
 
-		//获取对象类型
-		type: function(obj) {
-			return object.prototype.toString.call(obj).match(/\s([a-z|A-Z]+)/)[1].toLowerCase();
-		},
-		//是否是window对象
-		isWindow: function(obj) {
-			return obj != null && obj === obj.window;
-		},
-		//是否是function对象
+		type: _type,
+
+		isWindow: _isWindow,
+
 		isFunction: function(obj) {
-			return small.type(obj) === "function";
+			return $.type(obj) === "function";
 		},
-		//判断对象是否有某属性名属性
+
 		hasOwn: function(obj, property) {
 			return object.prototype.hasOwnProperty.call(obj, property);
 		},
-		//判断是否是字符串
+
 		isString: function(obj) {
-			return small.type(obj) === 'string';
+			return $.type(obj) === 'string';
 		},
 
 		isEmptyString: function(obj) {
@@ -179,11 +206,11 @@
 		},
 
 		isNumber: function(obj) {
-			return small.type(obj) === 'number' && !isNaN(obj);
+			return $.type(obj) === 'number' && !isNaN(obj);
 		},
 
 		isObject: function(obj) {
-			return small.type(obj) === 'object';
+			return $.type(obj) === 'object';
 		},
 
 		isHTML: function(obj) {
@@ -214,59 +241,15 @@
 			return obj === false;
 		},
 
-		isPlainObject: function(obj) {
+		isPlainObject: _isPlainObject,
 
-			if (!small.isObject(obj) || obj.nodeType || small.isWindow(obj)) {
-				return false;
-			}
-
-			try {
-				if (obj.constructor && !hasOwn.call(obj.constructor.prototype, "isPrototypeOf")) {
-					return false;
-				}
-			} catch (e) {
-				return false;
-			}
-
-			return true;
-		},
-		//判断是否是数组对象
 		isArray: array.isArray,
 
 		isUndefind: function(obj) {
 			return typeof obj === 'undefined';
 		},
 		toString: function(obj) {
-			return small.isTrue(obj) ? 'yes' : small.isFalse(obj) ? 'no' : small.isObject(obj) ? JSON.stringify(obj) : obj;
-		},
-		query: function(selector, context) {
-
-			var doms;
-
-			var dom = context || document;
-
-			if (small.isString(selector) && !small.isEmptyString(selector)) {
-
-				if (small.isHTML(selector)) {
-
-				} else if (small.isClass(selector)) {
-
-					doms = dom.getElementsByClassName(selector.substring(1));
-
-				} else if (small.isID(selector) && dom === document) {
-
-					doms = dom.getElementById(selector.substring(1));
-
-				} else if (small.isTag(selector)) {
-
-					doms = dom.getElementsByTagName(selector);
-
-				}
-			} else {
-				doms = [];
-			}
-
-			return doms;
+			return $.isTrue(obj) ? 'yes' : $.isFalse(obj) ? 'no' : $.isObject(obj) ? JSON.stringify(obj) : obj;
 		},
 		uniqueSort: function(obj) {
 			var hasDuplicate = false,
@@ -274,7 +257,7 @@
 				elem,
 				j = 0,
 				i = 0;
-			if (!small.isArray(obj)) {
+			if (!$.isArray(obj)) {
 				return [];
 			} else {
 				obj.sort(function(a, b) {
@@ -296,104 +279,88 @@
 				}
 				return obj;
 			}
+		},
+		getDOMObject: function(selector, children) {
+			var nodeTypes = [1, 9, 11],
+				doms = null;
+			if ($.isString(selector)) {
+				doms = $.query(document, selector);
+				if (!$.isUndefind(children) && $.isString(children)) {
+					if (doms.length === 0) {
+						doms = null;
+					} else if (doms.length === 1) {
+						doms = $.query(doms[0], children);
+					} else {
+						doms = doms.map(function(dom) {
+							return $.query(dom, children);
+						});
+					}
+				}
+			} else if ($.isDocument(selector) && nodeTypes.indexOf(selector.nodeType) >= 0 || $.isWindow(selector)) {
+				doms = [selector];
+			} else if ($.isArray(selector)) {
+				doms = selector.filter(function(dom) {
+					return !$.isNull(dom);
+				});
+			}
+			return doms;
+		},
+		query: function(dom, selector) {
+			var doms,
+
+				selector = selector.trim();
+
+			if ($.isClass(selector)) {
+				doms = dom.getElementsByClassName(selector.substring(1));
+			} else if ($.isID(selector)) {
+				doms = document.getElementById(selector.substring(1));
+				if (!doms) {
+					doms = [];
+				}
+			} else if ($.isTag(selector)) {
+				doms = dom.getElementsByTagName(selector);
+			} else {
+				doms = dom.querySelectorAll(selector);
+			}
+			return doms.nodeType ? [doms] : doms.toArray();
 		}
 	});
 
-	/*
-		选择器
-	*/
+	global.Small = $;
 
-	var S = function(dom, selector, context) {
+	'$' in global || (global.$ = $);
 
-		dom = dom ? (dom.nodeType ? [dom] : dom.toArray() || []) : [];
+	var
+	_Small = global.Small,
 
-		dom.selector = selector || '';
+		_$ = global.$;
 
-		dom.context = context || [];
-
-		dom.__proto__ = small.fn;
-
-		small.extend(dom.__proto__, {
-			isSmall: SMALLOBJECT
-		});
-
-		return dom;
-
-	};
-
-	small.fn.init = function(selector, context) {
-
-		if (small.isUndefind(selector) || (small.isEmptyString(selector) && small.isUndefind(context))) {
-
-			return S();
-
-		} else {
-			if (small.isString(selector) && !small.isEmptyString(selector)) {
-
-				if (small.isUndefind(context)) {
-
-					return S(small.query(selector, document), selector, document);
-
-				} else if (small.isDocument(context)) {
-
-					return S(small.query(selector, context), selector, context);
-
-				} else if (small.isSmall(context)) {
-
-					return S(small.query(selector, context[0]), selector, context[0]);
-
-				}
-
-			} else if (!small.isString(selector) || small.isEmptyString(selector)) {
-
-				if (small.isSmall(selector) || small.isSmall(context)) {
-
-					context = small.isEmptyString(selector) ? context : selector;
-
-					return context;
-
-				} else if (small.isDocument(selector) || small.isDocument(context)) {
-
-					context = small.isEmptyString(selector) ? context : selector;
-
-					return S(context);
-
-				} else if (small.isArray(selector) || small.isArray(context)) {
-
-					context = small.isEmptyString(selector) ? context : selector;
-
-					return S(context);
-
-				}
-
-			}
+	$.noConflict = function(deep) {
+		if (global.$ === $) {
+			global.$ = _$;
 		}
 
-	};
+		if (deep && global.Small === $) {
+			global.Small = _small;
+		}
 
-	/*
-		small给document装备方法
-	 */
-	small.fn.extend({
-
-		indexOf: array.prototype.indexOf,
-
-		forEach: array.prototype.forEach,
-
-		map: array.prototype.map,
-
-		filter: array.prototype.filter,
-
+		return $;
+	}
+})(this);
+DEBUG && console.timeEnd('core');
+DEBUG && console.time('dom');
+(function($) {
+	$.extend($.fn, {
 		html: function(obj) {
-			if (small.isUndefind(obj)) {
+			if ($.isUndefind(obj)) {
 				return this[0].innerHTML;
 			} else {
 				this.forEach(function(dom) {
-					if (small.isString(obj) || small.isNumber(obj)) {
+					if ($.isString(obj) || $.isNumber(obj)) {
 						dom.innerHTML = obj;
 					} else {
 						dom.innerHTML = null;
-						if (small.isArray(obj)) {
+						if ($.isArray(obj)) {
 							obj.forEach(function(item) {
 								dom.appendChild(item);
 							});
@@ -406,7 +373,7 @@
 		},
 
 		text: function(obj) {
-			if (small.isUndefind(obj)) {
+			if ($.isUndefind(obj)) {
 				return this[0].textContent;
 			} else {
 				this.forEach(function(dom) {
@@ -430,15 +397,14 @@
 		},
 
 		find: function(selector) {
-			return small.fn.init(selector, this);
 		},
 
 		attr: function(name, value) {
-			if (small.isUndefind(value)) {
+			if ($.isUndefind(value)) {
 				return this[0].getAttribute(name);
 			} else {
 				this.forEach(function(dom) {
-					dom.setAttribute(name, small.toString(value));
+					dom.setAttribute(name, $.toString(value));
 				});
 				return this;
 			}
@@ -453,7 +419,7 @@
 
 		data: function(name, value) {
 			var datas = [];
-			if (small.isUndefind(name)) {
+			if ($.isUndefind(name)) {
 				var data = {};
 				this.forEach(function(dom) {
 					dom.dataset.forEach(function(value, key) {
@@ -461,7 +427,7 @@
 					});
 					datas.push(data);
 				});
-			} else if (small.isUndefind(value)) {
+			} else if ($.isUndefind(value)) {
 				this.forEach(function(dom) {
 					datas.push(dom.dataset[name]);
 				});
@@ -476,26 +442,26 @@
 		},
 
 		removeData: function(name) {
-			if (!small.isUndefind(name)) {
+			if (!$.isUndefind(name)) {
 				this.removeAttr('data-' + name);
 			}
 			return this;
 		},
 
 		val: function(value) {
-			if (small.isUndefind(value)) {
+			if ($.isUndefind(value)) {
 				return this.length ? this[0].value : null;
 			} else {
 				this.forEach(function(dom) {
-					dom.value = small.toString(value);
+					dom.value = $.toString(value);
 				});
 				return this;
 			}
 		},
 
 		css: function(property, value) {
-			if (small.isUndefind(value)) {
-				if (small.isObject(property)) {
+			if ($.isUndefind(value)) {
+				if ($.isObject(property)) {
 					property.forEach(function(value, key) {
 						this.css(key, value);
 					}.bind(this));
@@ -540,8 +506,8 @@
 		},
 
 		parents: function(obj) {
-			if (small.isUndefind(obj)) {
-				return S(small.uniqueSort(this.map(function(dom) {
+			if ($.isUndefind(obj)) {
+				return S($.uniqueSort(this.map(function(dom) {
 					return dom.parentNode;
 				})));
 			} else {
@@ -570,9 +536,9 @@
 		},
 
 		children: function(obj) {
-      return _filtered(_flatten(this.map(function(dom) {
-        return dom.children.toArray();
-      })), obj);
+			return _filtered(_flatten(this.map(function(dom) {
+				return dom.children.toArray();
+			})), obj);
 		}
 	});
 
@@ -618,36 +584,10 @@
 	}
 
 	function _filtered(nodes, selector) {
-		return S(small.isUndefind(selector) ? nodes : nodes.filter(function(dom) {
+		return S($.isUndefind(selector) ? nodes : nodes.filter(function(dom) {
 			return dom.parentNode &&
-				S(small.query(selector, dom.parentNode)).indexOf(dom) >= 0;
+				S($.query(selector, dom.parentNode)).indexOf(dom) >= 0;
 		}));
 	};
-
-	/*
-		在环境中装配small对象
-	*/
-	var
-	_small = window.small,
-
-		_$ = window.$;
-
-	small.noConflict = function(deep) {
-		if (window.$ === small) {
-			window.$ = _$;
-		}
-
-		if (deep && window.small === small) {
-			window.small = _small;
-		}
-
-		return small;
-	};
-
-	if (typeof noGlobal === strundefined) {
-		window.small = window.$ = small;
-	};
-
-	return small;
-
-}));
+})(Small);
+DEBUG && console.timeEnd('dom');
