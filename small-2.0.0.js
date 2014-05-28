@@ -517,7 +517,7 @@ DEBUG && console.time('env');
 		if (!status[item.g] && (matches = item.r.exec(userAgent))) {
 			status[item.g] = env[item.n] = item.v || +matches[1];
 			if (item.x) {
-				$.mixin(env, item.x);
+				$.extend(env, item.x);
 			}
 		}
 	}
