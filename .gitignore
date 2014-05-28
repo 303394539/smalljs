@@ -4,3 +4,4 @@ data
 node_modules
 *.esproj
 .DS_Store
+small.min.*
