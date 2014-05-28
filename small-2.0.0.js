@@ -4,7 +4,7 @@ typeof DEBUG === 'undefined' && (DEBUG = 1);
 DEBUG && console.time('core');
 (function(global) {
 	var
-	document = window.document,
+		document = window.document,
 
 		version = "2.0.0",
 
@@ -331,7 +331,7 @@ DEBUG && console.time('core');
 	'$' in global || (global.$ = $);
 
 	var
-	_Small = global.Small,
+		_Small = global.Small,
 
 		_$ = global.$;
 
@@ -351,7 +351,7 @@ DEBUG && console.timeEnd('core');
 DEBUG && console.time('env');
 (function($) {
 
-	var msPointerEnabled = !! window.navigator.msPointerEnabled;
+	var msPointerEnabled = !!window.navigator.msPointerEnabled;
 	var userAgent = navigator.userAgent;
 
 	var platforms = [
@@ -525,7 +525,7 @@ DEBUG && console.time('env');
 	// these platforms only allow one argument for console.log
 	// env.dumbConsole = !!(env.android || env.ios || env.webos);
 
-	env.mobile = !! (status[0]);
+	env.mobile = !!(status[0]);
 
 	$.env = env;
 
@@ -792,14 +792,229 @@ DEBUG && console.time('dom');
 })(Small);
 DEBUG && console.timeEnd('dom');
 DEBUG && console.time('loader');
-console.log('no loader');
+(function($) {
+	var EXP_READY = /complete|loaded|interactive/;
+	var EXP_HTTP = /^(?:\.\/|\.\.\/|http:\/\/|https:\/\/)/i;
+	var EXP_EXT = /(?:\.js|\.css)$/i;
+	var EXP_CSS = /\.css$/i;
+
+	var queue = [];
+	var caches = {};
+
+	var step = 0;
+
+	var callback = [];
+
+	var isReady = EXP_READY.test(document.readyState);
+
+	var head = document.getElementsByTagName('head')[0];
+
+	var options = $.options = {
+		baseUrl: '',
+		alias: typeof REQUIRE_ALIAS === 'undefined' ? {} : REQUIRE_ALIAS
+	};
+
+	var scripts = document.getElementsByTagName('script');
+
+	var script, main, scriptUrl, baseUrl;
+
+	for (var i = 0; i < scripts.length; i++) {
+		script = scripts[i];
+		if ((main = script.getAttribute('data-main'))) {
+			baseUrl = script.getAttribute('data-base-url');
+			if (!baseUrl) {
+				scriptUrl = script.getAttribute('src');
+				baseUrl = scriptUrl.substring(0, scriptUrl.lastIndexOf('/'));
+			}
+			options.baseUrl = baseUrl;
+
+			_push(main.split(';').map(function(item) {
+				return item.indexOf(',') >= 0 ? item.split(',') : item;
+			}));
+		}
+
+	};
+
+	// check ready status
+	if (!isReady) {
+		if (document.addEventListener) {
+			document.addEventListener('DOMContentLoaded', _DOMLoaded, false);
+			window.addEventListener('load', _load, false);
+		} else {
+			document.attachEvent('onreadystatechange', _DOMLoaded);
+			window.attachEvent('onload', _load);
+		}
+	} else {
+		_load();
+	}
+
+	$.require = function() {
+		var i = 0;
+		var len = arguments.length;
+		var item, type;
+
+		while (i < len) {
+			type = $.type(item = arguments[i++]);
+
+			if (type == 'function') {
+				callback.push(item);
+			} else if (type == 'object') {
+				$.extend(options, item, true);
+			} else if (item != null) { // type == string
+				_push(Array.isArray(item) ? item : [item]);
+			}
+		}
+
+		_load();
+	};
+
+	function _push(list) {
+		var hasArrayEmbed = false;
+		var len = list.length;
+		var i = 0;
+		var item;
+		while (i < len) {
+			item = list[i];
+			if (Array.isArray(item)) {
+				hasArrayEmbed = true;
+			} else if (item) {
+				if (options.alias[item] && Array.isArray(item = options.alias[item])) {
+					list.splice(i--, 1, item);
+					len = list.length;
+				} else {
+					if (!EXP_HTTP.test(item)) {
+						item = options.baseUrl + item;
+					}
+
+					if (!EXP_EXT.test(item)) {
+						item += '.js';
+					}
+				}
+
+				list[i] = item;
+			}
+
+			i++;
+		}
+
+		if (hasArrayEmbed) {
+			for (i = 0; i < len; i++) {
+				item = list[i];
+				if (Array.isArray(item)) {
+					_push(item);
+				} else {
+					queue.push([item]);
+				}
+			}
+		} else {
+			queue.push(list);
+		}
+	}
+
+	function _load() {
+		if (!isReady || step > 0) {
+			return;
+		}
+
+		if (queue.length == 0) {
+			for (var cb; cb = callback.shift(); cb());
+		} else {
+			var files = queue.shift();
+
+			var len = files.length;
+			var i = 0;
+			var item, node;
+
+			step = len;
+
+			while (i < len) {
+				if (caches[item = files[i++]]) {
+					// caches[item]++;
+					step--;
+				} else {
+					caches[item] = 1;
+
+					if (EXP_CSS.test(item)) { // load CSS file
+						node = document.createElement('node');
+						node.href = item;
+						node.rel = 'stylesheet';
+						head.appendChild(node);
+
+						step--;
+					} else { // load JavaScript file
+						node = document.createElement('script');
+						node.src = item;
+						head.appendChild(node);
+
+						if (node.attachEvent) {
+							node.attachEvent('onreadystatechange', _loaded);
+						} else {
+							node.addEventListener('load', _loaded, false);
+							node.addEventListener('error', _loadFailed, false);
+						}
+					}
+				}
+			};
+
+			if (step == 0) {
+				_load();
+			}
+		}
+	}
+
+	function _loaded(event) {
+		var el = event.currentTarget || event.srcElement;
+		if (event.type === 'load' || EXP_READY.test(el.readyState)) {
+			step--;
+			_removeListener(el);
+
+			// console.log('file ' + (this.src || this.href) + ' loaded');
+			_load();
+		}
+	}
+
+	function _loadFailed(event) {
+		var el = event.currentTarget || event.srcElement;
+		step--;
+		_removeListener(el);
+	}
+
+	function _removeListener(node) {
+		if (node.detachEvent) {
+			node.detachEvent('onreadystatechange', _loaded);
+		} else {
+			node.removeEventListener('load', _loaded, false);
+			node.removeEventListener('error', _loadFailed, false);
+		}
+	}
+
+	function _DOMLoaded() {
+		if (document.addEventListener) {
+			document.removeEventListener('DOMContentLoaded', _DOMLoaded, false);
+		} else if (EXP_READY.test(document.readyState)) {
+			document.detachEvent('onreadystatechange', _DOMLoaded);
+		} else {
+			return;
+		}
+
+		isReady = true;
+		_load();
+	}
+
+})(Small);
 DEBUG && console.timeEnd('loader');
 DEBUG && console.time('event');
-console.log('no event');
+(function($) {
+
+})(Small);
 DEBUG && console.timeEnd('event');
 DEBUG && console.time('gesture');
-console.log('no gesture');
+(function($) {
+
+})(Small);
 DEBUG && console.timeEnd('gesture');
 DEBUG && console.time('ajax');
-console.log('no ajax');
+(function($) {
+
+})(Small);
 DEBUG && console.timeEnd('ajax');
